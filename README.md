@@ -217,3 +217,30 @@ El script `scripts/git-flow-bootstrap.sh` crea el historial con ese flujo.
 - **Dominio**: reglas de `Account` y mayoría de edad (incluido el caso límite "cumple 18 hoy / mañana").
 - **Service** (Mockito): reglas de negocio de clientes, cuentas, transacciones y estado de cuenta.
 - **Controller** (`@WebMvcTest` + MockMvc): códigos HTTP, validaciones y formato de error.
+- **Integración** (Testcontainers + PostgreSQL 16): constraints de BD, trigger de mayoría de edad, FK, CHECK de email, concurrencia en transferencias.
+
+---
+
+## 6. Limitaciones conocidas
+
+### Generación de número de cuenta (race condition)
+**Archivo:** `AccountService.generateAccountNumber()` (líneas 109–118)
+
+El algoritmo actual usa un bucle `do/while`:
+```java
+do {
+    number = prefix + String.format("%08d", random.nextInt(100_000_000));
+} while (accountRepository.existsByAccountNumber(number));
+```
+
+**Problema:** la comprobación `existsByAccountNumber` y el posterior `save` **no son atómicos**. Dos hilos concurrentes pueden generar el mismo número, ambos pasar la comprobación y el segundo fallar en BD con `UNIQUE violation` → `DataIntegrityViolationException` → HTTP 409.
+
+**Probabilidad de colisión:** ~1 en 100 millones por intento (8 dígitos aleatorios). En carga baja es despreciable; en alta concurrencia sostenida se vuelve apreciable.
+
+**Defensa actual:** el `UNIQUE` en la BD (`uk_accounts_number`) garantiza integridad — nunca se persisten duplicados. La API responde **409 Conflict** con mensaje genérico, lo cual es **reintentable** por el cliente.
+
+**Mejora futura (sin cambiar lógica de negocio):**
+- Opción A: usar **secuencia en BD** (`CREATE SEQUENCE` + `nextval`) o `GENERATED ALWAYS AS IDENTITY` + trigger que compone el prefijo. Elimina colisiones por diseño.
+- Opción B: capturar `DataIntegrityViolationException` dentro de una transacción **nueva** (`PROPAGATION_REQUIRES_NEW` vía `TransactionTemplate`) y reintentar 1–2 veces con backoff. *Riesgo:* si se captura la excepción dentro de la transacción actual, esta queda marcada *rollback-only* y el `save` posterior falla irremediablemente.
+
+La solución elegida debe priorizar simplicidad y no romper la atomicidad de la creación de cuenta + movimiento inicial.

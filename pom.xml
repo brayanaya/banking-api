@@ -13,7 +13,7 @@
 
     <groupId>com.trinity</groupId>
     <artifactId>banking-api</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <name>banking-api</name>
     <description>API REST para la administración de clientes, productos y transacciones de una entidad financiera</description>
 
@@ -21,6 +21,7 @@
         <java.version>17</java.version>
         <springdoc.version>2.6.0</springdoc.version>
         <jacoco.version>0.8.12</jacoco.version>
+        <testcontainers.version>1.21.3</testcontainers.version>
     </properties>
 
     <dependencies>
@@ -73,6 +74,20 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Testcontainers para tests de integración con PostgreSQL real -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

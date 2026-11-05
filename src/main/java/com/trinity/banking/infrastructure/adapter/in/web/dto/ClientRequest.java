@@ -32,7 +32,7 @@ public record ClientRequest(
         @NotBlank(message = "El correo electrónico es obligatorio")
         @Size(max = 150, message = "El correo no puede superar 150 caracteres")
         @Email(message = "El correo electrónico no es válido")
-        @Pattern(regexp = "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", message = "El correo debe tener el formato xxxx@xxxxx.xxx")
+        @Pattern(regexp = "^[^@\\s]+@[^@\\s]+\\.[^@\\s]{2,}$", message = "El correo debe tener el formato xxxx@xxxxx.xxx (TLD mínimo 2 caracteres)")
         String email,
 
         @NotNull(message = "La fecha de nacimiento es obligatoria")
