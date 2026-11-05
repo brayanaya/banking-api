@@ -36,6 +36,10 @@ import com.trinity.banking.domain.port.in.ClientUseCase;
 
 import java.time.LocalDate;
 
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+
 @WebMvcTest(ClientController.class)
 class ClientControllerTest {
 
@@ -214,5 +218,29 @@ class ClientControllerTest {
         mockMvc.perform(get("/api/v1/clients/1"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.message").value("Error interno del servidor"));
+    }
+
+    @Test
+    void dataIntegrityViolationReturns409() throws Exception {
+        when(clientUseCase.create(any(ClientCommand.class)))
+                .thenThrow(new DataIntegrityViolationException("Unique constraint violation"));
+
+        mockMvc.perform(post("/api/v1/clients").contentType(MediaType.APPLICATION_JSON).content(VALID_BODY))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("La operación viola una restricción de integridad de datos"));
+    }
+
+    @Test
+    void unsupportedHttpMethodReturns405() throws Exception {
+        // PUT is not supported on /api/v1/clients (only POST, GET)
+        mockMvc.perform(put("/api/v1/clients").contentType(MediaType.APPLICATION_JSON).content(VALID_BODY))
+                .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    void nonExistentEndpointReturns404() throws Exception {
+        mockMvc.perform(get("/api/v1/non-existent-endpoint"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Recurso no encontrado"));
     }
 }
