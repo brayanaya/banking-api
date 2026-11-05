@@ -29,8 +29,12 @@ import com.trinity.banking.TestData;
 import com.trinity.banking.domain.exception.BusinessRuleException;
 import com.trinity.banking.domain.exception.DuplicateResourceException;
 import com.trinity.banking.domain.exception.ResourceNotFoundException;
+import com.trinity.banking.domain.model.Client;
+import com.trinity.banking.domain.model.IdentificationType;
 import com.trinity.banking.domain.port.in.ClientCommand;
 import com.trinity.banking.domain.port.in.ClientUseCase;
+
+import java.time.LocalDate;
 
 @WebMvcTest(ClientController.class)
 class ClientControllerTest {
@@ -73,6 +77,37 @@ class ClientControllerTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.details").isNotEmpty());
         verifyNoInteractions(clientUseCase);
+    }
+
+    @Test
+    void createRejectsEmailWithOneCharTld() throws Exception {
+        String body = VALID_BODY.replace("laura.gomez@example.com", "test@dominio.c");
+
+        mockMvc.perform(post("/api/v1/clients").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.details").isNotEmpty());
+        verifyNoInteractions(clientUseCase);
+    }
+
+    @Test
+    void createAcceptsEmailWithTwoCharTld() throws Exception {
+        String body = VALID_BODY.replace("laura.gomez@example.com", "test@dominio.co");
+        Client clientWithCustomEmail = Client.builder()
+                .id(1L)
+                .identificationType(IdentificationType.CC)
+                .identificationNumber("1075000001")
+                .firstName("Laura")
+                .lastName("Gomez")
+                .email("test@dominio.co")
+                .birthDate(LocalDate.of(1992, 3, 14))
+                .createdAt(TestData.NOW.minusDays(10))
+                .build();
+        when(clientUseCase.create(any(ClientCommand.class))).thenReturn(clientWithCustomEmail);
+
+        mockMvc.perform(post("/api/v1/clients").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.email").value("test@dominio.co"));
     }
 
     @Test
