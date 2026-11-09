@@ -20,6 +20,7 @@ docker compose up --build
 
 | Recurso | URL |
 |---|---|
+| Frontend Web (Portal Bancario) | http://localhost:3000 |
 | Swagger UI (probar la API) | http://localhost:8080/swagger-ui.html |
 | Health | http://localhost:8080/actuator/health |
 | PostgreSQL | `localhost:5433` (db `banking`, user `banking`, pass `banking`) |
